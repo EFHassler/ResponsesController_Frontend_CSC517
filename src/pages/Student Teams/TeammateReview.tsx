@@ -227,7 +227,7 @@ const TeammateReview = () => {
                                     </span>
                                 )}
 
-                                {(itemType === 'Criterion' || itemType === 'Scale' || itemType === 'Checkbox') && (
+                                {itemType !== 'UploadFile' && (
                                     <ItemRenderer
                                         itemType={itemType}
                                         itemId={itemId}
@@ -253,58 +253,6 @@ const TeammateReview = () => {
                                             setBooleanSelections((prev) => ({ ...prev, [itemId]: newValue }))
                                         }
                                     />
-                                )}
-
-                                {(itemType === 'TextArea' || itemType === 'Unknown') && (
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={4}
-                                        placeholder="Your comments..."
-                                        value={answers[itemId] ?? ''}
-                                        onChange={(e) => setAnswers(prev => ({ ...prev, [itemId]: e.target.value }))}
-                                    />
-                                )}
-
-                                {itemType === 'TextField' && (
-                                    <Form.Control
-                                        type="text"
-                                        placeholder="Your response..."
-                                        value={answers[itemId] ?? ''}
-                                        onChange={(e) => setAnswers(prev => ({ ...prev, [itemId]: e.target.value }))}
-                                    />
-                                )}
-
-                                {itemType === 'Dropdown' && options.length > 0 && (
-                                    <Form.Select
-                                        value={answers[itemId] ?? ''}
-                                        onChange={(e) => setAnswers(prev => ({ ...prev, [itemId]: e.target.value }))}
-                                    >
-                                        <option value="">Select an option</option>
-                                        {options.map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                        ))}
-                                    </Form.Select>
-                                )}
-
-                                {itemType === 'MultipleChoice' && options.length > 0 && (
-                                    <div className="d-flex flex-column gap-2">
-                                        {options.map((option) => (
-                                            <Form.Check
-                                                key={`${itemId}-${option}`}
-                                                type="radio"
-                                                name={`multiple-choice-${itemId}`}
-                                                label={option}
-                                                checked={(answers[itemId] ?? '') === option}
-                                                onChange={() => setAnswers(prev => ({ ...prev, [itemId]: option }))}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {(itemType === 'Dropdown' || itemType === 'MultipleChoice') && options.length === 0 && (
-                                    <Alert variant="secondary" className="mb-0 py-2">
-                                        No options provided for this item.
-                                    </Alert>
                                 )}
 
                                 {itemType === 'UploadFile' && (

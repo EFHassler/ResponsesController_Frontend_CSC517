@@ -1,8 +1,15 @@
 import React from "react";
 import { Alert } from "react-bootstrap";
+
 import CriterionItem from "./items/CriterionItem";
 import ScaleItem from "./items/ScaleItem";
 import CheckboxItem from "./items/CheckboxItem";
+import TextFieldItem from "./items/TextFieldItem";
+import TextAreaItem from "./items/TextAreaItem";
+import DropdownItem from "./items/DropdownItem";
+import MultipleChoiceItem from "./items/MultipleChoiceItem";
+import UploadFileItem from "./items/UploadFileItem";
+
 import { NormalizedItemType } from "./types";
 
 interface ItemRendererProps {
@@ -24,9 +31,7 @@ interface ItemRendererProps {
 }
 
 const ItemRenderer: React.FC<ItemRendererProps> = (props) => {
-  const { itemType } = props;
-
-  switch (itemType) {
+  switch (props.itemType) {
     case "Criterion":
       return <CriterionItem {...props} />;
 
@@ -36,10 +41,25 @@ const ItemRenderer: React.FC<ItemRendererProps> = (props) => {
     case "Checkbox":
       return <CheckboxItem {...props} />;
 
+    case "TextField":
+      return <TextFieldItem {...props} />;
+
+    case "TextArea":
+      return <TextAreaItem {...props} />;
+
+    case "Dropdown":
+      return <DropdownItem {...props} />;
+
+    case "MultipleChoice":
+      return <MultipleChoiceItem {...props} />;
+
+    case "UploadFile":
+      return <UploadFileItem {...props} />;
+
     default:
       return (
-        <Alert variant="secondary" className="mb-0 py-2">
-          Item type <strong>{itemType}</strong> not extracted yet.
+        <Alert variant="secondary">
+          Item type {props.itemType} not supported
         </Alert>
       );
   }
