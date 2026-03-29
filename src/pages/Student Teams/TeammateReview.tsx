@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Badge, Button, Form, Spinner } from 'react-bootstrap';
 import { useLocation } from 'react-router-dom';
 import useAPI from '../../hooks/useAPI';
+import ItemRenderer from '../../components/responses/ItemRenderer';
 
 type QuestionnaireType = 'Review' | 'Teammate Review';
 
@@ -136,13 +137,13 @@ const TeammateReview = () => {
         || questionnaireNameFromUrl
         || `${resolvedQuestionnaireType} Questionnaire`;
 
-    // Fetch questionnaire items once we know the questionnaire id
+    const resolvedQuestionnaireId = resolvedQuestionnaire?.id || questionnaireIdFromUrl;
+
     useEffect(() => {
-        const qId = resolvedQuestionnaire?.id || questionnaireIdFromUrl;
-        if (qId) {
-            fetchItems({ url: `/questionnaires/${qId}/items`, method: 'GET' });
+        if (resolvedQuestionnaireId) {
+            fetchItems({ url: `/questionnaires/${resolvedQuestionnaireId}/items`, method: 'GET' });
         }
-    }, [resolvedQuestionnaire?.id, questionnaireIdFromUrl, fetchItems]);
+    }, [resolvedQuestionnaireId, fetchItems]);
 
     const items: any[] = useMemo(() => {
         const data = itemsResponse?.data;
@@ -161,7 +162,7 @@ const TeammateReview = () => {
         );
     }
 
-    const isLoading = assignmentLoading || itemsLoading;
+    const isLoading = assignmentLoading || (!!resolvedQuestionnaireId && itemsLoading);
 
     return (
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column' }}>
@@ -183,7 +184,13 @@ const TeammateReview = () => {
                 </div>
             )}
 
-            {!isLoading && items.length === 0 && (
+            {!isLoading && !resolvedQuestionnaireId && (
+                <Alert variant="warning">
+                    No questionnaire could be resolved for this review type. Try opening the page with a valid questionnaire_id.
+                </Alert>
+            )}
+
+            {!isLoading && resolvedQuestionnaireId && items.length === 0 && (
                 <Alert variant="warning">
                     No questionnaire items found for this review type. The assignment may not have a{' '}
                     {resolvedQuestionnaireType} questionnaire configured yet.
@@ -198,7 +205,6 @@ const TeammateReview = () => {
                         const itemText = item.txt || item.question || item.description || `Item #${itemId}`;
                         const options = parseAlternatives(item);
                         const { min, max } = getScoreBounds(item, resolvedQuestionnaire);
-                        const scoreOptions = Array.from({ length: Math.max(0, max - min + 1) }, (_, offset) => String(min + offset));
 
                         if (itemType === 'SectionHeader') {
                             return (
@@ -214,32 +220,38 @@ const TeammateReview = () => {
                                 <Form.Label className="fw-semibold mb-0">
                                     {idx + 1}. {itemText}
                                 </Form.Label>
+
                                 {item.weight && (
                                     <span className="text-muted" style={{ fontSize: 13 }}>
                                         Weight: {item.weight}
                                     </span>
                                 )}
 
-                                {(itemType === 'Criterion' || itemType === 'Scale') && (
-                                    <Form.Select
+                                {(itemType === 'Criterion' || itemType === 'Scale' || itemType === 'Checkbox') && (
+                                    <ItemRenderer
+                                        itemType={itemType}
+                                        itemId={itemId}
+                                        item={item}
+                                        itemText={`${idx + 1}. ${itemText}`}
                                         value={answers[itemId] ?? ''}
-                                        onChange={(e) => setAnswers(prev => ({ ...prev, [itemId]: e.target.value }))}
-                                        style={{ maxWidth: 180 }}
-                                    >
-                                        <option value="">Select score ({min}-{max})</option>
-                                        {scoreOptions.map((scoreValue) => (
-                                            <option key={scoreValue} value={scoreValue}>{scoreValue}</option>
-                                        ))}
-                                    </Form.Select>
-                                )}
-
-                                {itemType === 'Criterion' && (
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={3}
-                                        placeholder="Comment (required with criterion)"
-                                        value={comments[itemId] ?? ''}
-                                        onChange={(e) => setComments(prev => ({ ...prev, [itemId]: e.target.value }))}
+                                        comment={comments[itemId] ?? ''}
+                                        options={options}
+                                        min={min}
+                                        max={max}
+                                        multiValue={multiSelections[itemId] ?? []}
+                                        booleanValue={booleanSelections[itemId] ?? false}
+                                        onValueChange={(newValue) =>
+                                            setAnswers((prev) => ({ ...prev, [itemId]: newValue }))
+                                        }
+                                        onCommentChange={(newValue) =>
+                                            setComments((prev) => ({ ...prev, [itemId]: newValue }))
+                                        }
+                                        onMultiValueChange={(newValue) =>
+                                            setMultiSelections((prev) => ({ ...prev, [itemId]: newValue }))
+                                        }
+                                        onBooleanChange={(newValue) =>
+                                            setBooleanSelections((prev) => ({ ...prev, [itemId]: newValue }))
+                                        }
                                     />
                                 )}
 
@@ -293,41 +305,6 @@ const TeammateReview = () => {
                                     <Alert variant="secondary" className="mb-0 py-2">
                                         No options provided for this item.
                                     </Alert>
-                                )}
-
-                                {itemType === 'Checkbox' && options.length > 0 && (
-                                    <div className="d-flex flex-column gap-2">
-                                        {options.map((option) => {
-                                            const selected = multiSelections[itemId] ?? [];
-                                            const isChecked = selected.includes(option);
-                                            return (
-                                                <Form.Check
-                                                    key={`${itemId}-${option}`}
-                                                    type="checkbox"
-                                                    label={option}
-                                                    checked={isChecked}
-                                                    onChange={(e) => {
-                                                        setMultiSelections(prev => {
-                                                            const existing = prev[itemId] ?? [];
-                                                            const updated = e.target.checked
-                                                                ? [...existing, option]
-                                                                : existing.filter((entry) => entry !== option);
-                                                            return { ...prev, [itemId]: updated };
-                                                        });
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {itemType === 'Checkbox' && options.length === 0 && (
-                                    <Form.Check
-                                        type="checkbox"
-                                        label="Selected"
-                                        checked={booleanSelections[itemId] ?? false}
-                                        onChange={(e) => setBooleanSelections(prev => ({ ...prev, [itemId]: e.target.checked }))}
-                                    />
                                 )}
 
                                 {itemType === 'UploadFile' && (
